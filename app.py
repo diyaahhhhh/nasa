@@ -1,81 +1,45 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
+# Create the Flask app instance
 app = Flask(__name__)
+
+# --- TEMPORARY SAMPLE DATA ---
+# This dictionary represents the data you will eventually get from Member C's script.
+sample_data = {
+  "location": "AuraCast Default Location",
+  "current_aqi": 75,
+  "last_updated": "2025-10-04T18:00:00Z",
+  "forecast_24hr": [
+    {"hour": i, "aqi": 75 + (i % 5), "pollutant": "PM2.5"} 
+    for i in range(24)
+  ],
+  "validation": {
+    "satellite_reading": 82,
+    "ground_sensor_reading": 78
+  }
+}
+
+# 1. Define the main route (simple health check)
 @app.route('/')
-def index():
-    return "<h1>AuraCast API is Running!</h1><p>Visit /get_alert or /get_validation to see data.</p>"
+def home():
+    """Returns a simple greeting to confirm the server is running."""
+    return "AuraCast Backend API is running! Access forecast data at /api/forecast"
 
-@app.route('/get_alert', methods=['GET'])
-def get_alert_status():
+# 2. Define the working API endpoint for the forecast
+@app.route('/api/forecast', methods=['GET'])
+def get_forecast():
+    """
+    Handles GET requests to /api/forecast. 
+    Currently returns temporary sample data. 
+    In the final app, this will call the forecasting script.
+    """
+    # Later, you will get the location from the request arguments, like this:
+    # location = request.args.get('location', 'default_location')
     
-    forecast_aqi = 118
-    user_alert_threshold = 101 
+    # Return the dictionary converted to JSON format
+    return jsonify(sample_data)
 
-    if forecast_aqi <= 50:
-        # Good
-        status = "Good"
-        message = "Air Quality is Good. Enjoy the outdoors!"
-        action = "No restrictions needed."
-
-    elif forecast_aqi <= 100:
-        # Moderate
-        status = "Moderate"
-        message = "Air Quality is Moderate."
-        action = "Unusually sensitive people should consider limiting long outdoor time."
-
-    elif forecast_aqi < 150: # This means 101-149
-        # Unhealthy for Sensitive Groups
-        status = "Unhealthy for Sensitive Groups"
-        message = f"🚨 AQI Alert: {forecast_aqi}. Air is UNHEALTHY for sensitive groups."
-        action = "Limit prolonged or heavy exertion outdoors."
-    
-    else:
-        # Catch-all for 150+ (Unhealthy and worse)
-        status = "Unhealthy or Worse"
-        message = f"🛑 WARNING: AQI {forecast_aqi} is high. Health risk is elevated."
-        action = "Everyone should avoid outdoor exertion."
-
-    return jsonify({
-        "aqi_value": forecast_aqi,
-        "aqi_status": status,
-        "alert_title": message,
-        "recommended_action": action,
-        "threshold_checked": user_alert_threshold
-    })
-@app.route('/get_validation', methods=['GET'])
-def get_validation_data():
-    satellite_no2 = 15.5
-    ground_no2 = 14.8
-    difference = satellite_no2 - ground_no2
-    
-    if ground_no2 == 0:
-        percent_difference = 0
-    else:
-        percent_difference = (abs(difference) / ground_no2) * 100
-
-    if difference > 0:
-        trend = "higher"
-    else:
-        trend = "lower"
-
-        f"The TEMPO satellite reading is {percent_difference:.1f}% {trend} "
-        f"than the closest ground sensor."
-    
-
-    return jsonify({
-        "satellite_value": satellite_no2,
-        "ground_value": ground_no2,
-        "difference_percent": f"{percent_difference:.1f}%",
-        "validation_message": validation_text
-    })
+# 3. Run the server
 if __name__ == '__main__':
+    # Running with debug=True allows the server to automatically reload when you save changes.
     app.run(debug=True)
-
-    
-
-
-
-
-
-
-
