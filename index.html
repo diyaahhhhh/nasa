@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AuraCast: Air Quality Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        /* Step 1.4: Style the Map Container to give it a size */
+        #airmap { 
+            height: 80vh; /* 80% of the screen height */
+            width: 100%; 
+        }
+        
+        /* Basic styling for the legend */
+        .legend {
+            padding: 6px 8px;
+            font: 14px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            line-height: 18px;
+            color: #555;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+            border-radius: 50%; /* Make the legend icons circles */
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div id="airmap"></div>
+
+    <div id="control-panel" style="padding: 10px; text-align: center;">
+        <button id="toggle-data">Show Ground Sensor Data (Current)</button>
+    </div>
+
+    <script>
+        // === Phase 1: Initialize the Map ===
+        
+        // Step 1.5: Initialize the map and set its view (Example: New York City)
+        var map = L.map('airmap').setView([40.7128, -74.0060], 11);
+
+        // Step 1.6: Add the base map tiles (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors | Data: TEMPO, OpenAQ'
+        }).addTo(map);
+
+        // CHECKPOINT 1: At this point, save the file and open it in your browser. You should see a map of NYC.
+
+      // Function to get the color based on the US AQI scale
+function getAQIColor(aqi) {
+    if (aqi <= 50) return '#00E400'; // Green: Good
+    if (aqi <= 100) return '#FFFF00'; // Yellow: Moderate
+    if (aqi <= 150) return '#FF7E00'; // Orange: Unhealthy for Sensitive Groups
+    if (aqi <= 200) return '#FF0000'; // Red: Unhealthy
+    if (aqi <= 300) return '#8F3F97'; // Purple: Very Unhealthy
+    return '#7E0023'; // Maroon: Hazardous
+}
+// Step 2.2: Mock Data (This is where data from Member D will eventually go)
+// Data points: [latitude, longitude, AQI, type (forecast or ground)]
+const mockForecastData = [
+    [40.78, -73.96, 125, 'forecast'], // Central Park (Orange)
+    [40.71, -74.01, 85, 'forecast'],  // Financial District (Yellow)
+    [40.69, -73.98, 45, 'forecast'],  // Brooklyn (Green)
+    [40.82, -73.94, 180, 'forecast']  // Harlem (Red)
+];
+
+const mockGroundData = [
+    [40.785, -73.965, 130, 'ground'], // Near Central Park (Orange)
+    [40.715, -74.005, 90, 'ground'],  // Near Financial District (Yellow)
+    [40.695, -73.985, 50, 'ground'],  // Near Brooklyn (Green)
+];
+
+// Group to hold all the markers, which we can easily show/hide
+const airQualityLayer = L.layerGroup().addTo(map);
+
+// Function to draw data points on the map
+function drawDataPoints(data) {
+    // Clear any existing layers before drawing new ones
+    airQualityLayer.clearLayers(); 
+
+    data.forEach(point => {
+        const lat = point[0];
+        const lng = point[1];
+        const aqi = point[2];
+        const type = point[3];
+
+        // Step 2.3: Draw the Circle Marker
+        const marker = L.circleMarker([lat, lng], {
+            radius: 10,
+            fillColor: getAQIColor(aqi),
+            color: '#000',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(airQualityLayer);
+
+        // Step 2.4: Add Popups
+        const description = getAQIDescription(aqi);
+        marker.bindPopup(`
+            <b>AQI: ${aqi} (${description})</b><br>
+            Source: ${type === 'forecast' ? 'AuraCast Forecast (TEMPO Model)' : 'Ground Sensor (OpenAQ)'}
+        `);
+    });
+}
+
+// Draw the initial forecast data
+drawDataPoints(mockForecastData);
+
+// Function to get the AQI description
+function getAQIDescription(aqi) {
+    if (aqi <= 50) return 'Good';
+    if (aqi <= 100) return 'Moderate';
+    if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+    if (aqi <= 200) return 'Unhealthy';
+    if (aqi <= 300) return 'Very Unhealthy';
+    return 'Hazardous';
+}
+   // Step 3.1: Create the AQI Legend
+var legend = L.control({position: 'bottomright'});
+
+legend.onAdd = function (map) {
+    var div = L.DomUtil.create('div', 'info legend'),
+        grades = [0, 51, 101, 151, 201, 301], // AQI breakpoints
+        labels = ['Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy', 'Hazardous'];
+
+    // loop through our AQI intervals and generate a label with a colored circle for each interval
+    for (var i = 0; i < grades.length; i++) {
+        // Use the getAQIColor function to grab the correct color
+        div.innerHTML +=
+            '<i style="background:' + getAQIColor(grades[i] + 1) + '"></i> ' +
+            grades[i] + (grades[i + 1] ? '&ndash;' + (grades[i + 1] - 1) + ': ' + labels[i] + '<br>' : '+: ' + labels[i]);
+    }
+
+    return div;
+};
+
+legend.addTo(map); 
+// Step 3.2: Implement the Data Comparison Toggle
+const toggleButton = document.getElementById('toggle-data');
+let showingForecast = true;
+
+toggleButton.addEventListener('click', function() {
+    if (showingForecast) {
+        // Switch to Ground Data
+        drawDataPoints(mockGroundData);
+        toggleButton.textContent = 'Show AuraCast Forecast (24hr)';
+        showingForecast = false;
+    } else {
+        // Switch back to Forecast Data
+        drawDataPoints(mockForecastData);
+        toggleButton.textContent = 'Show Ground Sensor Data (Current)';
+        showingForecast = true;
+    }
+});  
+
+// Step 3.3: Simple Wind Direction Visualization (Conceptual/Polylines)
+// Assume the worst pollution spot (Harlem) has a strong wind blowing SE.
+const worstPollutionSpot = [40.82, -73.94]; // Harlem
+const endOfPlume = [40.80, -73.90]; // Southeast point
+
+// Define the path of the plume
+const plumePath = [
+    worstPollutionSpot,
+    endOfPlume
+];
+
+// Draw the plume (a red line with a fading effect is too advanced for simple Leaflet, so we use a simple red line)
+const plumeLine = L.polyline(plumePath, {
+    color: 'red', // Color of the pollution
+    weight: 5,
+    dashArray: '10, 5', // Makes it dashed to suggest movement
+    opacity: 0.6
+}).bindTooltip("Wind Direction (Estimated Plume)", {permanent: true, direction: 'right'}).addTo(map);
+
+// Add the plume layer to the map
+plumeLine.addTo(map);
+    </script>
+</body>
+</html>
