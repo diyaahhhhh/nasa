@@ -2,20 +2,18 @@
 <html>
 <head>
     <title>AuraCast: Air Quality Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <style>
-        /* Step 1.4: Style the Map Container to give it a size */
         #airmap { 
-            height: 80vh; /* 80% of the screen height */
+            height: 80vh; 
             width: 100%; 
         }
         
-        /* Basic styling for the legend */
         .legend {
             padding: 6px 8px;
             font: 14px Arial, Helvetica, sans-serif;
@@ -32,12 +30,13 @@
             float: left;
             margin-right: 8px;
             opacity: 0.7;
-            border-radius: 50%; /* Make the legend icons circles */
+            border-radius: 50%;
         }
-        
     </style>
 </head>
 <body>
+    <h1>AuraCast Air Quality Dashboard</h1>
+
     <div id="alert-display-panel" style="padding: 15px; margin: 10px; background-color: #EEE; border-radius: 5px;">
         <h2>Forecast Alert Status: <span id="status-text">Loading...</span></h2>
         <p><strong id="alert-title"></strong></p>
@@ -52,181 +51,170 @@
 
     <div id="airmap"></div>
 
-function fetchMapMarkers() {
-    const api_url = 'http://127.0.0.1:5000/get_map_data'; 
-    
-    fetch(api_url)
-        .then(response => response.json())
-        .then(data => {
-            console.log("Map Data Received:", data);
-            // This draws the markers using your existing Leaflet function!
-            drawDataPoints(data);
-        })
-        .catch(error => {
-            console.error('Error fetching map markers:', error);
-        });
-}
-function fetchAlertStatus() {
-    const api_url = 'http://127.0.0.1:5000/get_alert'; 
-
-    fetch(api_url)
-        .then(response => response.json())
-        .then(data => {
-            console.log("Alert Status Received:", data);
-            
-            // Populate the HTML panel with data from the API
-            document.getElementById('status-text').textContent = data.aqi_status;
-            document.getElementById('alert-title').textContent = data.alert_title;
-            document.getElementById('action-text').textContent = data.recommended_action;
-        })
-        .catch(error => {
-            console.error('Error fetching alert status:', error);
-        });
-}
-function fetchValidationData() {
-    const api_url = 'http://127.0.0.1:5000/get_validation'; 
-
-    fetch(api_url)
-        .then(response => response.json())
-        .then(data => {
-            console.log("Validation Data Received:", data);
-            
-            // Populate the HTML panel with data from the API
-            document.getElementById('sat-value').textContent = data.satellite_value;
-            document.getElementById('ground-value').textContent = data.ground_value;
-            document.getElementById('validation-message').textContent = data.validation_message;
-        })
-        .catch(error => {
-            console.error('Error fetching validation data:', error);
-        });
-}
-fetchMapMarkers();
-fetchAlertStatus();
-fetchValidationData();
-
-    <div id="airmap"></div>
-
     <div id="control-panel" style="padding: 10px; text-align: center;">
         <button id="toggle-data">Show Ground Sensor Data (Current)</button>
     </div>
 
     <script>
-        var map = L.map('airmap').setView([40.7128, -74.0060], 11);
+        
+        function fetchMapMarkers() {
+            const api_url = 'http://127.0.0.1:5000/get_map_data'; 
+            
+            fetch(api_url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Map Data Received:", data);
+                    
+                    drawDataPoints(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching map markers:', error);
+                });
+        }
+        
+        function fetchAlertStatus() {
+            const api_url = 'http://127.0.0.1:5000/get_alert'; 
 
+            fetch(api_url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Alert Status Received:", data);
+                    
+                    document.getElementById('status-text').textContent = data.aqi_status;
+                    document.getElementById('alert-title').textContent = data.alert_title;
+                    document.getElementById('action-text').textContent = data.recommended_action;
+                })
+                .catch(error => {
+                    console.error('Error fetching alert status:', error);
+                });
+        }
+        
+        function fetchValidationData() {
+            const api_url = 'http://127.0.0.1:5000/get_validation'; 
+
+            fetch(api_url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Validation Data Received:", data);
+                    
+                    document.getElementById('sat-value').textContent = data.satellite_value;
+                    document.getElementById('ground-value').textContent = data.ground_value;
+                    document.getElementById('validation-message').textContent = data.validation_message;
+                })
+                .catch(error => {
+                    console.error('Error fetching validation data:', error);
+                });
+        }
+        
+        var map = L.map('airmap').setView([40.7128, -74.0060], 11);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors | Data: TEMPO, OpenAQ'
         }).addTo(map);
-function getAQIColor(aqi) {
-    if (aqi <= 50) return '#00E400'; 
-    if (aqi <= 100) return '#FFFF00'; 
-    if (aqi <= 150) return '#FF7E00';
-    if (aqi <= 200) return '#FF0000'; 
-    if (aqi <= 300) return '#8F3F97';
-    return '#7E0023';
-}
-const mockForecastData = [
-    [40.78, -73.96, 125, 'forecast'], 
-    [40.71, -74.01, 85, 'forecast'],  
-    [40.69, -73.98, 45, 'forecast'],
-    [40.82, -73.94, 180, 'forecast']
-];
 
-const mockGroundData = [
-    [40.785, -73.965, 130, 'ground'],
-    [40.715, -74.005, 90, 'ground'],  
-    [40.695, -73.985, 50, 'ground'],
-];
+        function getAQIColor(aqi) {
+            if (aqi <= 50) return '#00E400';  
+            if (aqi <= 100) return '#FFFF00';  
+            if (aqi <= 150) return '#FF7E00';
+            if (aqi <= 200) return '#FF0000';  
+            if (aqi <= 300) return '#8F3F97';
+            return '#7E0023';
+        }
 
+        const mockGroundData = [
+            [40.785, -73.965, 130, 'ground'],
+            [40.715, -74.005, 90, 'ground'],    
+            [40.695, -73.985, 50, 'ground'],
+        ];
 
-const airQualityLayer = L.layerGroup().addTo(map);
+        const airQualityLayer = L.layerGroup().addTo(map);
 
-function drawDataPoints(data) 
-    airQualityLayer.clearLayers(); 
+        function drawDataPoints(data) {
+            airQualityLayer.clearLayers(); 
 
-    data.forEach(point => {
-        const lat = point[0];
-        const lng = point[1];
-        const aqi = point[2];
-        const type = point[3];
+            data.forEach(point => {
+                const lat = point[0];
+                const lng = point[1];
+                const aqi = point[2];
+                const type = point[3];
 
-        const marker = L.circleMarker([lat, lng], {
-            radius: 10,
-            fillColor: getAQIColor(aqi),
-            color: '#000',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-        }).addTo(airQualityLayer);
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 10,
+                    fillColor: getAQIColor(aqi),
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(airQualityLayer);
 
-        const description = getAQIDescription(aqi);
-        marker.bindPopup(`
-            <b>AQI: ${aqi} (${description})</b><br>
-            Source: ${type === 'forecast' ? 'AuraCast Forecast (TEMPO Model)' : 'Ground Sensor (OpenAQ)'}
-        `);
-    });
-}
-drawDataPoints(mockForecastData);
+                const description = getAQIDescription(aqi);
+                marker.bindPopup(`
+                    <b>AQI: ${aqi} (${description})</b><br>
+                    Source: ${type === 'forecast' ? 'AuraCast Forecast (TEMPO Model)' : 'Ground Sensor (OpenAQ)'}
+                `);
+            });
+        }
+        
+        function getAQIDescription(aqi) {
+            if (aqi <= 50) return 'Good';
+            if (aqi <= 100) return 'Moderate';
+            if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+            if (aqi <= 200) return 'Unhealthy';
+            if (aqi <= 300) return 'Very Unhealthy';
+            return 'Hazardous';
+        }
 
-function getAQIDescription(aqi) {
-    if (aqi <= 50) return 'Good';
-    if (aqi <= 100) return 'Moderate';
-    if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
-    if (aqi <= 200) return 'Unhealthy';
-    if (aqi <= 300) return 'Very Unhealthy';
-    return 'Hazardous';
-}
-var legend = L.control({position: 'bottomright'});
+        var legend = L.control({position: 'bottomright'});
 
-legend.onAdd = function (map) {
-    var div = L.DomUtil.create('div', 'info legend'),
-        grades = [0, 51, 101, 151, 201, 301], 
-        labels = ['Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy', 'Hazardous'];
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend'),
+                grades = [0, 51, 101, 151, 201, 301], 
+                labels = ['Good', 'Moderate', 'Unhealthy for Sensitive Groups', 'Unhealthy', 'Very Unhealthy', 'Hazardous'];
 
-    for (var i = 0; i < grades.length; i++) {
-    
-        div.innerHTML +=
-            '<i style="background:' + getAQIColor(grades[i] + 1) + '"></i> ' +
-            grades[i] + (grades[i + 1] ? '&ndash;' + (grades[i + 1] - 1) + ': ' + labels[i] + '<br>' : '+: ' + labels[i]);
-    }
+            for (var i = 0; i < grades.length; i++) {
+                div.innerHTML +=
+                    '<i style="background:' + getAQIColor(grades[i] + 1) + '"></i> ' +
+                    grades[i] + (grades[i + 1] ? '&ndash;' + (grades[i + 1] - 1) + ': ' + labels[i] + '<br>' : '+: ' + labels[i]);
+            }
 
-    return div;
-};
+            return div;
+        };
 
-legend.addTo(map); 
+        legend.addTo(map); 
 
-const toggleButton = document.getElementById('toggle-data');
-let showingForecast = true;
+        const toggleButton = document.getElementById('toggle-data');
+        let showingForecast = true;
 
-toggleButton.addEventListener('click', function() {
-    if (showingForecast) {
-        drawDataPoints(mockGroundData);
-        toggleButton.textContent = 'Show AuraCast Forecast (24hr)';
-        showingForecast = false;
-    } else {
+        toggleButton.addEventListener('click', function() {
+            if (showingForecast) {
+                drawDataPoints(mockGroundData);
+                toggleButton.textContent = 'Show AuraCast Forecast (24hr)';
+                showingForecast = false;
+            } else {
+                fetchMapMarkers(); 
+                toggleButton.textContent = 'Show Ground Sensor Data (Current)';
+                showingForecast = true;
+            }
+        }); 
 
-        drawDataPoints(mockForecastData);
-        toggleButton.textContent = 'Show Ground Sensor Data (Current)';
-        showingForecast = true;
-    }
-});  
+        const worstPollutionSpot = [40.82, -73.94]; 
+        const endOfPlume = [40.80, -73.90]; 
+        const plumePath = [
+            worstPollutionSpot,
+            endOfPlume
+        ];
+        
+        const plumeLine = L.polyline(plumePath, {
+            color: 'red',
+            weight: 5,
+            dashArray: '10, 5', 
+            opacity: 0.6
+        }).bindTooltip("Wind Direction (Estimated Plume)", {permanent: true, direction: 'right'}).addTo(map);
 
-
-const worstPollutionSpot = [40.82, -73.94]; 
-const endOfPlume = [40.80, -73.90]; 
-const plumePath = [
-    worstPollutionSpot,
-    endOfPlume
-];
-
-    color: 'red',
-    weight: 5,
-    dashArray: '10, 5', 
-    opacity: 0.6
-}).bindTooltip("Wind Direction (Estimated Plume)", {permanent: true, direction: 'right'}).addTo(map);
-
-plumeLine.addTo(map);
+        fetchMapMarkers();
+        fetchAlertStatus();
+        fetchValidationData();
     </script>
 </body>
 </html>
